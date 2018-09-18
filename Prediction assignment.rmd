@@ -1,0 +1,111 @@
+---
+title: "Prediction assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installing packages:
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+```
+
+##Set seed:
+
+```{r}
+set.seed(1000)
+```
+
+##Load data and deal with "NA","#DIV/0!"and "".
+
+
+```{r}
+url.train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url.test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training <- read.csv(url(url.train), na.strings = c("NA", "", "#DIV0!"))
+testing <- read.csv(url(url.test), na.strings = c("NA", "", "#DIV0!"))
+```
+
+## Exploratory data analysis to the training -data set.
+
+
+
+```{r}
+dim(training)
+colnames(training)
+str(training[1:7])
+```
+
+So there are 160 variables. The first 7 variables can be left out. And all there columns where all the values are missing, can be left out. Let's do that and see, which variables are left.
+
+```{r}
+training   <-training[,-c(1:7)]
+testing <-testing[,-c(1:7)]
+training<-training[,colSums(is.na(training)) == 0]
+testing <-testing[,colSums(is.na(testing)) == 0]
+colnames(training)
+```
+##Create data partition
+75% of the data goes to the training set and 25% to the testing set.
+```{r}
+traintrainset <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+TrainTraining <- training[traintrainset, ] 
+TestTraining <- training[-traintrainset, ]
+```
+Lets look closer at the classe -variable in the TrainTraining data set:
+```{r}
+str(TrainTraining$classe)
+summary(TrainTraining$classe)
+```
+So classe is a factor variable with 5 levels.
+
+##Decision tree
+```{r}
+tree1 <- rpart(classe ~ ., data=TrainTraining, method="class")
+rpart.plot(tree1, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+```
+
+Test results on the testing data.
+
+```{r}
+prediction1 <- predict(tree1, TestTraining, type = "class")
+confusionMatrix(prediction1, TestTraining$classe)
+```
+
+The accuracy of a decision tree is 0.7137.
+
+##Random forest
+```{r}
+forest2 <- randomForest(classe ~. , data=TrainTraining, method="class")
+
+```
+
+Let's test this on training set.
+```{r}
+prediction2 <- predict(forest2, TestTraining, type = "class")
+confusionMatrix(prediction2, TestTraining$classe)
+
+```
+
+The accuracy of a random forest is 0.9953.
+
+##Conclusion:
+The accuracy of a random forest (0.9953) is better than of a decision tree (0.7137), and that's why random forest is chosen to count the final results.
+
+##Final results:
+Let's count the final results with the random forest -model.
+
+```{r}
+prediction <- predict(forest2, testing, type="class")
+prediction
+
+
+```
